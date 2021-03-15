@@ -10,7 +10,7 @@
 # Enrichment by genomic region
 1. **plot_chip_ratio.R**: Plot ratio of real:expected ChIP-seq reads at annotated genomic regions of interest.
 
-# DNMT3A1 enrichment tests (Ext Fig 4a)
+# DNMT3A1 enrichment tests
 1. **bigwigToBedgraph.sh**:	Map scores to 10kb bins.
 3. **shuffle_regions.sh**: Permute CGIs genome-wide to get a set of comparison regions.
 4. **permutation_analysis.R**: Plot DNMT3A scores across CGIs and permuted regions.
