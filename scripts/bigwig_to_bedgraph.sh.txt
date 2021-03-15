@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+##### Chopping genome into ${bin_size} bp bins
+# the file "mm10.chrom.sizes.bed" is derived from http://hgdownload.cse.ucsc.edu/goldenPath/mm10/bigZips/mm10.chrom.sizes
+bin_size=10000
+build=mm10
+blacklist=mm10-blacklist.bed # ENCODE mm10 blacklist
+
+awk 'BEGIN {OFS = "\t"} {print $1, 0, $2}' ${build}.chrom.sizes > ${build}.chrom.sizes.bed
+
+bedops --chop ${bin_size} ${build}.chrom.sizes.bed > ${build}_chopped_${bin_size}.bedgraph
+bedtools sort -i ${build}_chopped_${bin_size}.bedgraph > ${build}_chopped_${bin_size}.bedgraph.sorted
+mv ${build}_chopped_${bin_size}.bedgraph.sorted ${build}_chopped_${bin_size}.bedgraph
+
+bedtools intersect -v -a ${build}_chopped_${bin_size}.bedgraph -b ${blacklist} > ${build}_chopped_${bin_size}_bl-removed.bedgraph
+bedtools sort -i ${build}_chopped_${bin_size}_bl-removed.bedgraph > ${build}_chopped_${bin_size}_bl-removed.bedgraph.sorted
+mv ${build}_chopped_${bin_size}_bl-removed.bedgraph.sorted ${build}_chopped_${bin_size}_bl-removed.bedgraph
+
+##### Converting bigwig to bedgraph
+
+data_dir=[../data/log2_normed_parental]
+outdir=[../data/log2_normed_parental/bedgraph_files]
+chopped=mm10_chopped_${bin_size}_bl-removed.bedgraph
+
+for sample in ${data_dir}/*${bin_size}*.bw
+do
+ sample_name=`basename ${sample::-3}`
+ bigWigToWig ${sample} ${outdir}/${sample_name}.wig
+ convert2bed --input=wig --zero-indexed < ${outdir}/${sample_name}.wig > ${outdir}/${sample_name}.bed
+ awk 'BEGIN {OFS = "\t"} {print $1, $2, $3, $4, $5}' ${outdir}/${sample_name}.bed > ${outdir}/${sample_name}.bedgraph
+ bedtools sort -i ${outdir}/${sample_name}.bedgraph > ${outdir}/${sample_name}_sorted.bedgraph
+ mv ${outdir}/${sample_name}_sorted.bedgraph ${outdir}/${sample_name}.bedgraph
+done
+
+for i in ${outdir}/*${bin_size}.bedgraph
+do
+ bedmap --echo --wmean ${chopped} ${i} > ${i::-9}_forced.bedgraph
+ sed -i 's | \t g' ${i::-9}_forced.bedgraph
+ sed -i '/NAN/d' ${i::-9}_forced.bedgraph
+done

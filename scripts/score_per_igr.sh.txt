@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+data_dir=[../data/log2_normed_parental/bedgraph_files]
+blacklist=mm10-blacklist.bed # ENCODE mm10 blacklist
+outdir=[../data/log2_normed_parental/bedgraph_files/mean_per_region]
+
+region_mean_and_intersect () {
+ for sample in ${data_dir}/*.bedgraph
+ do
+  sample_name=`basename ${sample::-9}`
+  ### keep only intervals within the region of interest
+  bedtools intersect \
+  -a ${sample} \
+  -b ${region_file} > ${data_dir}/${sample_name}_in_${region_name}.bedgraph
+  ## remove blacklist regions
+  bedtools intersect -v \
+  -a ${data_dir}/${sample_name}_in_${region_name}.bedgraph \
+  -b ${blacklist} \
+  > ${data_dir}/${sample_name}_in_${region_name}_bl-removed.bedgraph
+  ### compute the average methylation score across IGRs
+  bedtools map -a ${region_file} -b ${sample} -c 4 -o mean > ${outdir}/${sample_name}_mean_per_${region_name}.bedgraph
+  ## remove blacklist regions
+  bedtools intersect -v \
+  -a ${outdir}/${sample_name}_mean_per_${region_name}.bedgraph \
+  -b ${blacklist} \
+  > ${outdir}/${sample_name}_mean_per_${region_name}_bl-removed.bedgraph
+  ### retain only bed columns plus score
+  awk 'BEGIN {OFS="\t"} {print $1, $2, $3, $4}' ${outdir}/${sample_name}_mean_per_${region_name}_bl-removed.bedgraph > ${outdir}/${sample_name}_mean_per_${region_name}_bl-removed.bedgraph.tmp
+  mv ${outdir}/${sample_name}_mean_per_${region_name}_bl-removed.bedgraph.tmp ${outdir}/${sample_name}_mean_per_${region_name}_bl-removed.bedgraph
+ done
+}
+
+##### get IGRs 
+genes=mm10_refseq_genes_sorted.bed
+genome=mm10.chrom.sizes.sorted # from http://hgdownload.cse.ucsc.edu/goldenPath/mm10/bigZips/mm10.chrom.sizes
+blacklist=mm10-blacklist.bed
+build=mm10
+
+# get complement of refseq genes
+bedtools complement -i ${genes} -g ${genome} > ${build}_IGRs.bed
+
+# remove blacklist
+bedtools subtract -a ${build}_IGRs.bed -b ${blacklist} > ${build}_IGRs_bl-removed.bed
+
+# retain only IGRs >= 10kb
+awk '($3-$2) >= 10000' ${build}_IGRs_bl-removed.bed > ${build}_IGRs_geq_10kb_bl-removed.bed
+#####
+
+##### get mean score per IGRs
+region_file=mm10_IGRs_geq_10kb_bl-removed.bed
+region_name=igr
+region_mean_and_intersect

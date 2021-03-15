@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+blacklist=mm10-blacklist.bed # ENCODE mm10 blacklist
+score_dir=[../data/log2_normed_parental]
+bin_size="10000" # bin size here refers to bin size when normalizing using deeptools bamCompare
+
+score_files=""
+score_names=""
+for score in "DNMT3A1" "DNMT3A1_delPWWP-QM" "DNMT3A1_K299I" "DNMT3A1_W330R" "DNMT3A1_R318W" "DNMT3A1_D333N" "Ring1b" "H2AK119Ub" "H3K27me3" "H3K36me2" "H3K36me3" 
+do
+ score_names+="$score "
+ score_files+="${score_dir}/log2_normed_${score}_${bin_size}.bw "
+done
+
+##### Genome-wide correlation of log2-normalized ChIP-seq with pseudocount 1 using deepTools 
+mkdir matrix_files plot_files
+
+multiBigwigSummary \
+   bins \
+ --bwfiles ${score_files} \
+ --blackListFileName ${blacklist} \
+ --outFileName [../matrix_files/bw_corr.wg.pearson.npz]
+
+# Plot correlation heatmap 
+plotCorrelation \
+ --plotTitle "" \
+ --corData matrix_files/bw_corr.wg.pearson.npz \
+ --corMethod pearson \
+ --whatToPlot heatmap --colorMap coolwarm  \
+ --plotFile [../plot_files/bw_corr.wg.pearson.heatmap.svg] \
+ --outFileCorMatrix [../matrix_files/bw_corr.wg.pearson.mat] \
+ --labels ${score_names}

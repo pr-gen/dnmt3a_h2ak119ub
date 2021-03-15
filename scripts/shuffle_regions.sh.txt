@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+genome=mm10.chrom.sizes.sorted
+genome_name=mm10
+blacklist=mm10-blacklist.bed
+region=[regions of interest bedfile]
+region_name=[regions of interest name]
+
+# Example region file and name:
+# region=mm10_IGRs-geq_10kb_bl-removed.bed
+# region_name="IGR-geq10kb"
+
+bedtools shuffle \
+ -i ${region} \
+ -g ${genome} \
+ -excl ${blacklist} \
+ -seed 50000 \
+ > ${region_name}_shuffled_regions_${genome_name}.bed
+
+bedtools sort -i ${region_name}_shuffled_regions_${genome_name}.bed > ${region_name}_shuffled_regions_${genome_name}_sorted.bed
+
+awk 'BEGIN {OFS = "\t"} {print $1, $2, $3}' ${region_name}_shuffled_regions_${genome_name}_sorted.bed > ${region_name}_shuffled_regions_${genome_name}.bed
+
+rm ${region_name}_shuffled_regions_${genome_name}_sorted.bed

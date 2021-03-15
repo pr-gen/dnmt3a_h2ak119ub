@@ -1,0 +1,15 @@
+#!/usr/env/bin bash
+
+par_score_dir=[../data/log2_normed_parental]
+mut_score_dir=[../data/log2_normed_sgRing1]
+bin_size="10000" # bin size here refers to bin size when normalizing using deeptools bamCompare
+
+samples="DNMT3A1_delPWWP-QM DNMT3A1_K299I DNMT3A1_W330R DNMT3A1_R318W DNMT3A1_D333N H2AK119Ub"
+
+for i in $samples
+do
+  par=${par_score_dir}/log2_normed_${i}_${bin_size}_forced.bedgraph
+  mut=${mut_score_dir}/log2_normed_${i}_${bin_size}_forced.bedgraph
+  paste $par $mut | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,$8-$4}' \
+  > [../data/delta/log2_normed_${i}_${bin_size}_delta-subtract_forced.bedgraph]
+done
